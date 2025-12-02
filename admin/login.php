@@ -6,44 +6,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    // Check against database
-    // Assuming table 'users' or similar. 
-    // Since the user said they HAVE the user 'admin' and password 'comex#2780' in the DB,
-    // I will try to find a table that matches or just use a hardcoded check if the query fails/is complex to guess.
-    // BUT, for a "real" project, I should query.
-    // I'll try to query 'users' table.
-
     try {
-        // Attempt to find the user in a generic 'users' table or 'res_users' if we created it (we didn't create res_users yet, but maybe the existing DB has one).
-        // The user said "la base de datos que ya tengo tiene para subir actividades...".
-        // I'll assume the table is 'users' and columns are 'username' and 'password'.
-        // If this fails, I'll provide a fallback in the catch block to allow login with the specific credentials provided HARDCODED for safety in this demo context if DB fails.
-
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+        // Check in res_users table
+        $stmt = $pdo->prepare("SELECT * FROM res_users WHERE username = ?");
         $stmt->execute([$username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($user && $user['password'] === $password) { // Plaintext password check as implied by "contraseña que es..."
+        if ($user && $user['password'] === $password) {
             $_SESSION['admin_logged_in'] = true;
             header("Location: index.php");
             exit;
         } else {
-            // Fallback: Check hardcoded credentials if DB check failed to find user (or if table names are different)
-            if ($username === 'admin' && $password === 'comex#2780') {
-                $_SESSION['admin_logged_in'] = true;
-                header("Location: index.php");
-                exit;
-            }
             $error = "Credenciales incorrectas.";
         }
     } catch (PDOException $e) {
-        // If table doesn't exist, fallback to hardcoded
-        if ($username === 'admin' && $password === 'comex#2780') {
-            $_SESSION['admin_logged_in'] = true;
-            header("Location: index.php");
-            exit;
-        }
-        $error = "Error de base de datos (y credenciales inválidas): " . $e->getMessage();
+        $error = "Error de base de datos: " . $e->getMessage();
     }
 }
 ?>

@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config.php';
+require_once '../includes/time_slots.php'; // Include time slots
 
 if (!isset($_SESSION['admin_logged_in'])) {
     header("Location: login.php");
@@ -11,16 +12,23 @@ if (!isset($_SESSION['admin_logged_in'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_schedule'])) {
     $room_id = $_POST['room_id'];
     $day_of_week = $_POST['day_of_week'];
-    $start_time = $_POST['start_time'];
-    $end_time = $_POST['end_time'];
+    $start_slot = $_POST['start_slot'];
+    $num_blocks = (int) $_POST['num_blocks'];
     $class_name = $_POST['class_name'];
     $teacher_name = $_POST['teacher_name'];
 
-    $stmt = $pdo->prepare("INSERT INTO res_schedules (room_id, day_of_week, start_time, end_time, class_name, teacher_name) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$room_id, $day_of_week, $start_time, $end_time, $class_name, $teacher_name]);
+    // Calculate times
+    $start_time = get_slot_start($start_slot);
+    $end_time = get_end_time_from_blocks($start_slot, $num_blocks);
 
-    header("Location: schedules.php");
-    exit;
+    if ($end_time) {
+        $stmt = $pdo->prepare("INSERT INTO res_schedules (room_id, day_of_week, start_time, end_time, class_name, teacher_name) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$room_id, $day_of_week, $start_time, $end_time, $class_name, $teacher_name]);
+        header("Location: schedules.php");
+        exit;
+    } else {
+        $error = "Error: El número de bloques excede el horario disponible.";
+    }
 }
 
 // Handle Delete Schedule
@@ -69,6 +77,9 @@ $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <div class="booking-form" style="max-width: 100%; margin-bottom: 3rem;">
             <h3 style="margin-bottom: 1.5rem; color: var(--primary-color);">Agregar Nuevo Horario</h3>
+            <?php if (isset($error)): ?>
+                <p style="color: var(--error-color); margin-bottom: 1rem;"><?= $error ?></p>
+            <?php endif; ?>
             <form method="POST"
                 style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
                 <div class="form-group" style="margin-bottom: 0;">
@@ -92,12 +103,20 @@ $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label>Inicio</label>
-                    <input type="time" name="start_time" required>
+                    <label>Bloque Inicio</label>
+                    <select name="start_slot" required>
+                        <?php foreach ($time_slots as $slot): ?>
+                            <option value="<?= $slot ?>"><?= $slot ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label>Fin</label>
-                    <input type="time" name="end_time" required>
+                    <label>Duración</label>
+                    <select name="num_blocks" required>
+                        <?php for ($i = 1; $i <= 8; $i++): ?>
+                            <option value="<?= $i ?>"><?= $i ?> Bloque(s)</option>
+                        <?php endfor; ?>
+                    </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label>Actividad/Clase</label>
@@ -129,7 +148,8 @@ $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <tr>
                             <td><?= htmlspecialchars($row['day_of_week']) ?></td>
                             <td><?= date('H:i', strtotime($row['start_time'])) ?> -
-                                <?= date('H:i', strtotime($row['end_time'])) ?></td>
+                                <?= date('H:i', strtotime($row['end_time'])) ?>
+                            </td>
                             <td><?= htmlspecialchars($row['room_name']) ?></td>
                             <td><?= htmlspecialchars($row['class_name']) ?></td>
                             <td><?= htmlspecialchars($row['teacher_name']) ?></td>

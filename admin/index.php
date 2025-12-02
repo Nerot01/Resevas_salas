@@ -7,15 +7,19 @@ if (!isset($_SESSION['admin_logged_in'])) {
     exit;
 }
 
-// Handle booking actions (Approve/Reject)
+// Handle booking actions (Approve/Reject/Delete)
 if (isset($_GET['action']) && isset($_GET['id'])) {
     $id = $_GET['id'];
-    $status = $_GET['action'] === 'approve' ? 'approved' : 'rejected';
+    $action = $_GET['action'];
 
-    $stmt = $pdo->prepare("UPDATE res_bookings SET status = ? WHERE id = ?");
-    $stmt->execute([$status, $id]);
-
-    // Optional: Send email to user about status change (omitted for brevity but recommended)
+    if ($action === 'delete') {
+        $stmt = $pdo->prepare("DELETE FROM res_bookings WHERE id = ?");
+        $stmt->execute([$id]);
+    } else {
+        $status = $action === 'approve' ? 'approved' : 'rejected';
+        $stmt = $pdo->prepare("UPDATE res_bookings SET status = ? WHERE id = ?");
+        $stmt->execute([$status, $id]);
+    }
 
     header("Location: index.php");
     exit;
@@ -83,6 +87,10 @@ $approved_bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .reject-btn {
             background-color: var(--error-color);
         }
+
+        .delete-btn {
+            background-color: #64748b;
+        }
     </style>
 </head>
 
@@ -136,6 +144,8 @@ $approved_bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         onclick="return confirm('¿Aprobar reserva?')">Aprobar</a>
                                     <a href="?action=reject&id=<?= $row['id'] ?>" class="action-btn reject-btn"
                                         onclick="return confirm('¿Rechazar reserva?')">Rechazar</a>
+                                    <a href="?action=delete&id=<?= $row['id'] ?>" class="action-btn delete-btn"
+                                        onclick="return confirm('¿Eliminar solicitud permanentemente?')">Eliminar</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -154,6 +164,7 @@ $approved_bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <th>Sala</th>
                         <th>Solicitante</th>
                         <th>Estado</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -165,6 +176,10 @@ $approved_bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <td><?= htmlspecialchars($row['room_name']) ?></td>
                             <td><?= htmlspecialchars($row['user_name']) ?></td>
                             <td><span class="status-badge status-approved">Aprobado</span></td>
+                            <td>
+                                <a href="?action=delete&id=<?= $row['id'] ?>" class="action-btn delete-btn"
+                                    onclick="return confirm('¿Eliminar reserva?')">Eliminar</a>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

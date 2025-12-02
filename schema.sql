@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS admin_users (
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 -- Insert some sample rooms
 INSERT INTO res_rooms (name, capacity, description) VALUES 
 ('Sala de Conferencias', 50, 'Sala equipada con proyector y sistema de sonido.'),
